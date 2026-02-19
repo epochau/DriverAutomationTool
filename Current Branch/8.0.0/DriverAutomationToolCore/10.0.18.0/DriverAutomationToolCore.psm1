@@ -1,7 +1,7 @@
 ﻿<#	
 	===========================================================================
 	 Created on:   	04/08/2024 16:48
-	 Udated on:   	19/12/2025 16:48
+	 Updated on:   	19/12/2025 16:48
 	 Created by:   	MauriceDaly
 	 Organization: 	MSEndpointMgr / Patch My PC
 	 Filename:     	DriverAutomationCore.psm1
@@ -44,10 +44,15 @@ function Get-DATScriptDirectory {
 
 # Script Build Numbers
 [version]$global:ScriptRelease = "1.0.18.0"
-$global:ScriptBuildDate = "19-12-2024"
-[version]$global:NewRelease = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data//DriverAutomationToolRev.txt" -UseBasicParsing).Content
+$global:ScriptBuildDate = "19-12-2025"
+try {
+	[version]$global:NewRelease = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/DriverAutomationToolRev.txt" -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop).Content.Trim()
+} catch {
+	Write-Verbose -Message "[Driver Automation Tool] - Unable to retrieve latest release version from GitHub. Falling back to local version. Error: $($_.Exception.Message)"
+	[version]$global:NewRelease = $global:ScriptRelease
+}
 $global:ReleaseNotesURL = "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/DriverAutomationToolNotes.txt"
-$OEMLinksURL = "https://raw.githubusercontent.com/epochau/DriverAutomationTool/master/Data/OEMLinks.xml"
+$OEMLinksURL = "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/OEMLinks.xml"
 
 # Path variables
 Write-Verbose -Message "[Driver Automation Tool Running] - Running version is $global:ScriptRelease"
@@ -195,7 +200,7 @@ function global:Write-DATLogEntry {
 	}
 	
 	# Construct time stamp for log entry
-	$Time = -join @((Get-Date -Format "HH:mm:ss.fff"), " ", (Get-WmiObject -Class Win32_TimeZone | Select-Object -ExpandProperty Bias))
+	$Time = -join @((Get-Date -Format "HH:mm:ss.fff"), " ", (Get-CimInstance -ClassName Win32_TimeZone).Bias)
 	
 	# Construct date for log entry
 	$Date = (Get-Date -Format "MM-dd-yyyy")
@@ -1382,7 +1387,7 @@ function Set-DATRegistryValue {
 				"*HKEY_LOCAL_MACHINE\Software*" {
 					$FullOSRegPath = $FullOSRegPath.ToLower()
 					$FullOSRegPath = $FullOSRegPath.Replace("hkey_local_machine\software", "HKLM:\FullOSSoftware")
-					$CustomBaseKey = "HKLM:\FullOSoftware"
+					$CustomBaseKey = "HKLM:\FullOSSoftware"
 					Write-DATLogEntry -Value "- Using software registry hive" -Severity 1
 				}
 			}
@@ -1531,34 +1536,34 @@ function Install-DATDriverPackage {
 		}
 		
 		# Gather device hardware type information
-		$ComputerManufacturer = (Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Manufacturer).Trim()
+		$ComputerManufacturer = (Get-CimInstance -ClassName "Win32_ComputerSystem").Manufacturer.Trim()
 		switch -Wildcard ($ComputerManufacturer) {
 			"*Microsoft*" {
 				$ComputerDetails.Manufacturer = "Microsoft"
-				$ComputerDetails.Model = (Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Model).Trim()
-				$ComputerDetails.SystemSKU = Get-WmiObject -Namespace "root\wmi" -Class "MS_SystemInformation" | Select-Object -ExpandProperty SystemSKU
+				$ComputerDetails.Model = (Get-CimInstance -ClassName "Win32_ComputerSystem").Model.Trim()
+				$ComputerDetails.SystemSKU = (Get-CimInstance -Namespace "root\wmi" -ClassName "MS_SystemInformation").SystemSKU
 			}
 			"*HP*" {
 				$ComputerDetails.Manufacturer = "HP"
-				$ComputerDetails.Model = (Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Model).Trim()
+				$ComputerDetails.Model = (Get-CimInstance -ClassName "Win32_ComputerSystem").Model.Trim()
 				$ComputerDetails.SystemSKU = (Get-CimInstance -ClassName "MS_SystemInformation" -Namespace "root\WMI").BaseBoardProduct.Trim()
 			}
 			"*Hewlett-Packard*" {
 				$ComputerDetails.Manufacturer = "HP"
-				$ComputerDetails.Model = (Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Model).Trim()
+				$ComputerDetails.Model = (Get-CimInstance -ClassName "Win32_ComputerSystem").Model.Trim()
 				$ComputerDetails.SystemSKU = (Get-CimInstance -ClassName "MS_SystemInformation" -Namespace "root\WMI").BaseBoardProduct.Trim()
 			}
 			"*Dell*" {
 				$ComputerDetails.Manufacturer = "Dell"
-				$ComputerDetails.Model = (Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Model).Trim()
+				$ComputerDetails.Model = (Get-CimInstance -ClassName "Win32_ComputerSystem").Model.Trim()
 				$ComputerDetails.SystemSKU = (Get-CimInstance -ClassName "MS_SystemInformation" -Namespace "root\WMI").SystemSku.Trim()
-				[string]$OEMString = Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty OEMStringArray
+				[string]$OEMString = (Get-CimInstance -ClassName "Win32_ComputerSystem").OEMStringArray
 				$ComputerDetails.FallbackSKU = [regex]::Matches($OEMString, '\[\S*]')[0].Value.TrimStart("[").TrimEnd("]")
 			}
 			"*Lenovo*" {
 				$ComputerDetails.Manufacturer = "Lenovo"
-				$ComputerDetails.Model = (Get-WmiObject -Class "Win32_ComputerSystemProduct" | Select-Object -ExpandProperty Version).Trim()
-				$ComputerDetails.SystemSKU = ((Get-WmiObject -Class "Win32_ComputerSystem" | Select-Object -ExpandProperty Model).SubString(0, 4)).Trim()
+				$ComputerDetails.Model = (Get-CimInstance -ClassName "Win32_ComputerSystemProduct").Version.Trim()
+				$ComputerDetails.SystemSKU = ((Get-CimInstance -ClassName "Win32_ComputerSystem").Model.SubString(0, 4)).Trim()
 			}
 		}
 		
@@ -1840,7 +1845,7 @@ function Get-DATSiteCode {
 		$SiteServer
 	)
 	try {
-		$SiteCodeObjects = Get-WmiObject -ComputerName $SiteServer -Namespace "root\SMS" -Class SMS_ProviderLocation -ErrorAction Stop
+		$SiteCodeObjects = Get-CimInstance -ComputerName $SiteServer -Namespace "root\SMS" -ClassName SMS_ProviderLocation -ErrorAction Stop
 		$SiteCodeError = $false
 	} catch {
 		Write-DATLogEntry -Value "[Error] - $($_.Exception.Message)" -Severity 3
@@ -1878,7 +1883,7 @@ function Get-DATDistributionPoints {
 
 
 	#Set-Location -Path [string]($SiteCode + ":\")
-	[Array]$DistributionPoints = Get-WmiObject -ComputerName $SiteServer -Namespace "Root\SMS\Site_$SiteCode" -Class SMS_SystemResourceList | Where-Object {
+	[Array]$DistributionPoints = Get-CimInstance -ComputerName $SiteServer -Namespace "Root\SMS\Site_$SiteCode" -ClassName SMS_SystemResourceList | Where-Object {
 		$_.RoleName -match "Distribution"
 	} | Select-Object -ExpandProperty ServerName -Unique | Sort-Object
 
@@ -1904,7 +1909,7 @@ function Get-DATDistributionPointGroups {
 		Import-Module $ModuleName -Verbose
 	}
 
-	[Array]$DistributionPointGroups = Get-WmiObject -ComputerName $SiteServer -Namespace "Root\SMS\Site_$SiteCode" -Query "SELECT Distinct Name FROM SMS_DistributionPointGroup" | Select-Object -ExpandProperty Name
+	[Array]$DistributionPointGroups = Get-CimInstance -ComputerName $SiteServer -Namespace "Root\SMS\Site_$SiteCode" -Query "SELECT Distinct Name FROM SMS_DistributionPointGroup" | Select-Object -ExpandProperty Name
 	
 	return $DistributionPointGroups
 }
