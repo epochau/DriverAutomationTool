@@ -47,7 +47,7 @@ function Get-DATScriptDirectory {
 $global:ScriptBuildDate = "19-12-2024"
 [version]$global:NewRelease = (Invoke-WebRequest -Uri "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data//DriverAutomationToolRev.txt" -UseBasicParsing).Content
 $global:ReleaseNotesURL = "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/DriverAutomationToolNotes.txt"
-$OEMLinksURL = "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/OEMLinks.xml"
+$OEMLinksURL = "https://raw.githubusercontent.com/epochau/DriverAutomationTool/master/Data/OEMLinks.xml"
 
 # Path variables
 Write-Verbose -Message "[Driver Automation Tool Running] - Running version is $global:ScriptRelease"
@@ -435,8 +435,6 @@ function Get-DATOEMModelInfo {
 	
 	# Call source link function
 	Write-DATLogEntry -Value "[OEM Links] - Reading OEM links" -Severity 1
-	
-	$OEMLinksURL = "https://raw.githubusercontent.com/maurice-daly/DriverAutomationTool/master/Data/OEMLinks.xml"
 	
 	# OEM Links Master File
 	try {
